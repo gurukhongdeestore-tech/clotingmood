@@ -296,3 +296,31 @@ input:focus, select:focus {
 .bulk-row {
     cursor: move; /* ช่วยให้กดลากจากพื้นที่บริเวณใดของแถวตารางก็ได้ ไม่ใช่แค่ที่ตัว ☰ */
 }
+/* --- MOBILE STYLING --- */
+@media (max-width: 768px) {
+    /* ... โค้ดอื่นๆ ของคุณ ... */
+
+    .logo { 
+        font-size: 16px;          /* ปรับโลโก้เล็กลงอีกนิดเพื่อเพิ่มพื้นที่แนวนอน */
+        letter-spacing: 1px; 
+    }
+
+    .search-container { 
+        width: 40%;               /* ลดความกว้างช่องค้นหาลงเล็กน้อยเพื่อให้ปุ่มมีพื้นที่ */
+    }
+
+    input[type="text"] {
+        padding: 8px 12px;        /* ลด padding ของช่องค้นหาลงให้กระชับเข้ากับมือถือ */
+        font-size: 13px;
+    }
+
+    /* ปรับแต่งปุ่มผู้ดูแลใน Header เฉพาะเวอร์ชันมือถือ */
+    .header-container .btn {
+        padding: 8px 14px;        /* ลดขนาด padding ลง ไม่ให้ปุ่มใหญ่เกินไป */
+        font-size: 13px;          /* ปรับขนาดตัวอักษรลงเล็กน้อย */
+        white-space: nowrap;      /* ล็อคไว้ไม่ให้ข้อความตัดขึ้นบรรทัดใหม่เด็ดขาด */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
