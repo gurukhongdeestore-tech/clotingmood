@@ -1,6 +1,6 @@
-// --- FIREBASE INITIALIZATION ---
+// --- FIREBASE INITIALIZATION (เปลี่ยนมาใช้ Cloud Firestore) ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
@@ -14,7 +14,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+const db = getFirestore(app); // เปลี่ยนมาใช้ Firestore
 const auth = getAuth(app);
 
 // สแตนด์บายโครงสร้างข้อมูลตั้งต้น
@@ -46,20 +46,38 @@ let activeMainCategoryContext = null;
 let isAdminLoggedIn = false;
 let draggedProductCard = null;
 
-// เชื่อมโยงและติดตามข้อมูลจาก Firebase Database
-const storeRef = ref(db, 'storeData');
-onValue(storeRef, (snapshot) => {
-    const data = snapshot.val();
-    if (data) {
-        storeData = data;
-        if (!storeData.slides) storeData.slides = [];
-        if (!storeData.categories) storeData.categories = [];
-        if (!storeData.products) storeData.products = [];
+// อ้างอิงเอกสารในหมวดหมู่ของ Cloud Firestore
+const storeDocRef = doc(db, 'config', 'storeData');
+
+// 1. ดักจับการเปลี่ยนแปลงข้อมูลจาก Cloud Firestore
+onSnapshot(storeDocRef, (snapshot) => {
+    if (snapshot.exists()) {
+        const data = snapshot.data();
+        // ดึงข้อมูลมาใช้งาน ถ้าข้อมูลส่วนไหนว่างจากการลบ ให้ตั้งเป็น Array ว่างทันที
+        storeData.slides = data.slides || [];
+        storeData.categories = data.categories || [];
+        storeData.products = data.products || [];
     } else {
-        set(storeRef, storeData);
+        // หาก Firebase ไม่มีข้อมูล (เช่น พึ่งเปิดใช้งานครั้งแรก)
+        storeData.slides = [];
+        storeData.categories = [];
+        storeData.products = [];
     }
     initApp();
 });
+
+// 2. ฟังก์ชันส่งข้อมูลไปบันทึกบน Cloud Firestore เมื่อมีการลบหรือแก้ไข
+function saveData() {
+    setDoc(storeDocRef, {
+        slides: storeData.slides || [],
+        categories: storeData.categories || [],
+        products: storeData.products || []
+    }).then(() => {
+        initApp(); 
+    }).catch((error) => {
+        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลไปที่ Firestore: " + error.message);
+    });
+}
 
 // ตรวจสอบสถานะการ Login จาก Firebase Auth
 onAuthStateChanged(auth, (user) => {
@@ -72,14 +90,6 @@ onAuthStateChanged(auth, (user) => {
     }
     initApp();
 });
-
-function saveData() {
-    set(storeRef, storeData).then(() => {
-        initApp(); 
-    }).catch((error) => {
-        alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลไปที่ Firebase: " + error.message);
-    });
-}
 
 function initApp() {
     renderSlider();
@@ -512,7 +522,8 @@ function deleteProductDirectly(id) {
     if (confirm('คุณต้องการลบสินค้าชิ้นนี้ใช่หรือไม่?')) {
         storeData.products = storeData.products.filter(p => p.id !== id);
         if (document.getElementById('edit-prod-id').value === id) cancelProductEdit();
-        saveData();
+        
+        saveData(); // <--- ต้องมีบรรทัดนี้เพื่อบันทึกการลบลง Firebase
     }
 }
 
@@ -551,9 +562,10 @@ function moveCategoryOrder(index, direction) {
 }
 
 function deleteCategory(id) {
-    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่นี้? (สินค้าที่ผูกไว้จะไม่ถูกลบ แต่จะไม่แสดงในหมวดนี้แล้ว)')) {
+    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่นี้?')) {
         storeData.categories = storeData.categories.filter(c => c.id !== id);
-        saveData();
+        
+        saveData(); // <--- ต้องมีบรรทัดนี้เพื่อบันทึกการลบลง Firebase
     }
 }
 
