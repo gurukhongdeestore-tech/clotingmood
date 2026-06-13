@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloting Mood รวมสินค้าแฟชั่น</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="header-container">
+            <h1 class="logo" onclick="applyCategoryFilterAndReset(null, 'สินค้าทั้งหมด')" style="cursor: pointer;">Cloting Mood</h1>
+            <div class="search-container">
+                <input type="text" id="global-search" placeholder="ค้นหาสินค้าที่นี่...">
+            </div>
+            <button id="admin-login-btn" class="btn btn-secondary">ผู้ดูแล</button>
+        </div>
+    </header>
+
+    <nav class="mobile-category-nav" id="mobile-categories"></nav>
+
+    <div class="top-hero-container">
+        <section class="slider-section">
+            <div class="slider-wrapper" id="slider-wrapper"></div>
+            <button class="slider-arrow prev-arrow" onclick="moveSlider(-1)">‹</button>
+            <button class="slider-arrow next-arrow" onclick="moveSlider(1)">›</button>
+            <div class="slider-dots" id="slider-dots-container"></div>
+        </section>
+    </div>
+
+    <div class="main-layout">
+        
+        <aside class="sidebar-menu">
+            <h3>หมวดหมู่สินค้า</h3>
+            <div id="sidebar-categories-tree"></div>
+        </aside>
+
+        <main class="content-area">
+            <section class="products-section">
+                <div class="section-title-bar">
+                    <h2 id="current-view-title">สินค้าทั้งหมด</h2>
+                    
+                    <div class="sort-container">
+                        <label for="product-sort-select" style="font-size: 14px; color: #555;">เรียงตาม:</label>
+                        <select id="product-sort-select" onchange="renderProducts()">
+                            <option value="default">สินค้าแนะนำ</option>
+                            <option value="price-asc">ราคา: จากน้อยไปมาก</option>
+                            <option value="price-desc">ราคา: จากมากไปน้อย</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="products-grid" id="products-grid"></div>
+            </section>
+        </main>
+    </div>
+
+    <div class="popup-overlay" id="category-popup">
+        <div class="popup-content modal-large">
+            <div class="popup-header">
+                <h3 id="popup-step-title">เลือกหมวดหมู่ย่อย</h3>
+                <button class="close-modal-btn" onclick="closePopup('category-popup')">&times;</button>
+            </div>
+            
+            <div id="popup-subcat-step" class="popup-step-view">
+                <div class="popup-selection-grid" id="popup-subcat-list"></div>
+                <div class="popup-footer-action">
+                    <button class="btn btn-secondary btn-full" id="btn-view-all-main"></button>
+                </div>
+            </div>
+
+            <div id="popup-brand-step" class="popup-step-view hidden">
+                <div class="popup-selection-grid" id="popup-brand-list"></div>
+                <div class="popup-footer-action" style="display: flex; gap: 10px;">
+                    <button class="btn btn-secondary" onclick="backToSubcatStep()">‹ ย้อนกลับ</button>
+                    <button class="btn btn-primary" id="btn-view-all-sub" style="flex-grow: 1;"></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="popup-overlay" id="login-popup">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h3>เข้าสู่ระบบผู้ดูแล</h3>
+                <button class="close-modal-btn" onclick="closePopup('login-popup')">&times;</button>
+            </div>
+            <input type="text" id="admin-user" placeholder="Username">
+            <input type="password" id="admin-pass" placeholder="Password" onkeypress="handleLoginKeyPress(event)">
+            <div class="popup-actions" style="display: flex; gap: 10px; margin-top: 5px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="closePopup('login-popup')">ยกเลิก</button>
+                <button class="btn btn-primary" style="flex:1;" id="btn-submit-login">เข้าสู่ระบบ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-dashboard" id="admin-panel">
+        <div class="admin-header">
+            <h2>ระบบจัดการหลังบ้าน (Admin Dashboard)</h2>
+            <button class="btn btn-danger" id="admin-logout-btn">ออกจากระบบ</button>
+        </div>
+        
+        <div class="admin-grid">
+            <div class="admin-card">
+                <h3 id="slide-form-title">1) จัดการรูปภาพสไลด์หน้าปก</h3>
+                <div class="form-group">
+                    <input type="hidden" id="edit-slide-idx" value="">
+                    <input type="text" id="new-slide-img" placeholder="URL รูปภาพหน้าปก">
+                    <input type="text" id="new-slide-link" placeholder="ลิงค์ปลายทางเมื่อกดรูป">
+                    <input type="text" id="new-slide-code" placeholder="โค้ดส่วนลดที่ใช้ร่วมกับสไลด์นี้">
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-primary" id="btn-save-slide" style="flex: 1;">เพิ่มรูปสไลด์</button>
+                        <button class="btn btn-secondary hidden" id="btn-cancel-slide" style="flex: 1;">ยกเลิก</button>
+                    </div>
+                </div>
+                <ul class="admin-list" id="admin-slides-list"></ul>
+            </div>
+
+            <div class="admin-card">
+                <h3>3) จัดการโครงสร้างหมวดหมู่ & แบรนด์</h3>
+                <div class="form-group">
+                    <select id="cat-type-select">
+                        <option value="main">หมวดหมู่หลัก</option>
+                        <option value="sub">หมวดหมู่ย่อย</option>
+                        <option value="brand">แบรนด์สินค้า</option>
+                    </select>
+                    
+                    <select id="parent-cat-select" class="hidden"></select>
+                    <input type="text" id="new-cat-name" placeholder="ชื่อหมวดหมู่ / แบรนด์">
+                    <button class="btn btn-primary btn-full" id="btn-add-category">เพิ่มหมวดหมู่/แบรนด์</button>
+                </div>
+                <ul class="admin-list" id="admin-category-list"></ul>
+            </div>
+
+            <div class="admin-card card-full">
+                <h3 id="product-form-title">2) เพิ่มสินค้าใหม่</h3>
+                <div class="product-form-grid">
+                    <input type="hidden" id="edit-prod-id" value="">
+                    <input type="text" id="prod-name" placeholder="ชื่อสินค้า">
+                    <input type="text" id="prod-img" placeholder="URL รูปสินค้า">
+                    <select id="prod-cat-select"><option value="">เลือกหมวดหมู่ย่อยหรือแบรนด์ปลายทาง</option></select>
+                    <input type="number" id="prod-price" placeholder="ราคาสินค้า (บาท)">
+                    <input type="text" id="prod-code" placeholder="โค้ดส่วนลด (เช่น 25%=2000)">
+                    <input type="text" id="prod-keywords" placeholder="Keyword (คั่นด้วยเครื่องหมายจุลภาค ,)">
+                    <input type="text" id="prod-link" placeholder="ลิงค์สินค้า (ปุ่มสั่งซื้อ)">
+                </div>
+                <div style="margin-top: 15px; display: flex; gap: 10px;" id="product-form-actions">
+                    <button class="btn btn-primary" id="btn-save-product">บันทึกสินค้า</button>
+                    <button class="btn btn-secondary hidden" id="btn-cancel-edit-product">ยกเลิกการแก้ไข</button>
+                </div>
+            </div>
+
+            <div class="admin-card card-full">
+                <h3>4) ตารางราคาด่วน</h3>
+                
+                <div class="bulk-filter-bar-container">
+                    <div class="bulk-selection-tools">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="select-all-bulk"> 
+                            <strong>เลือกสินค้าทั้งหมดในตาราง</strong>
+                        </label>
+                        <div class="code-selector-wrapper">
+                            <label for="admin-filter-code-select"><strong>เลือกด่วนตามโค้ดส่วนลดที่มี:</strong></label>
+                            <select id="admin-filter-code-select">
+                                <option value="">-- เลือกโค้ดเพื่อติ๊ก Checkbox สินค้าทั้งหมดที่ใช้โค้ดนี้ --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="bulk-action-panel">
+                        <div class="action-input-group">
+                            <input type="text" id="bulk-code-new" placeholder="ระบุโค้ดส่วนลดตัวใหม่ที่ต้องการเปลี่ยน">
+                            <button class="btn btn-accent" id="btn-apply-bulk-code">เปลี่ยนโค้ดสินค้าที่เลือกทั้งหมด</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="bulk-table">
+                        <thead>
+                            <tr>
+                                <th width="6%">ลาก</th>
+                                <th width="6%">เลือก</th>
+                                <th width="12%">รูปภาพ</th>
+                                <th>ชื่อสินค้า</th>
+                                <th width="22%">ราคาปกติ (พิมพ์แล้ว Enter)</th>
+                                <th width="22%">โค้ดส่วนลดปัจจุบัน</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bulk-product-list"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <footer class="main-footer">
+        <div class="footer-container">
+            <p>&copy; 2026 Cloting Mood. All Rights Reserved. | Designed with ClotingMood</p>
+        </div>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
