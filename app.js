@@ -52,12 +52,10 @@ onValue(storeRef, (snapshot) => {
     const data = snapshot.val();
     if (data) {
         storeData = data;
-        // จัดการโครงสร้าง Array เปล่าหากโหนดถูกลบจนหมดป้องกัน Error
         if (!storeData.slides) storeData.slides = [];
         if (!storeData.categories) storeData.categories = [];
         if (!storeData.products) storeData.products = [];
     } else {
-        // หาก Database ยังว่างเปล่า ให้ส่งค่าเริ่มต้นขึ้นไปเก็บไว้ก่อน
         set(storeRef, storeData);
     }
     initApp();
@@ -366,7 +364,7 @@ function handleLogin() {
             alert('ยินดีต้อนรับเข้าสู่ระบบจัดการหลังบ้านครับ');
         })
         .catch((error) => {
-            alert('เกิดข้อผิดพลาด: ' + error.message);
+            alert('เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + error.message);
         });
 }
 
@@ -380,7 +378,11 @@ function handleLogout() {
     });
 }
 
-function handleLoginKeyPress(e) { if (e.key === 'Enter') handleLogin(); }
+function handleLoginKeyPress(e) { 
+    if (e.key === 'Enter') {
+        handleLogin(); 
+    }
+}
 
 // --- SLIDE BANNER ACTIONS ---
 function saveSlideAction() {
@@ -637,7 +639,6 @@ function renderAdminPanel() {
             </tr>
         `).join('');
         
-        // ผูก Event Handler ให้กับช่องแก้ไขราคากด Enter
         bulkTbody.querySelectorAll('.inline-edit-price').forEach(input => {
             input.addEventListener('keypress', (e) => {
                 handleInlinePriceEnter(e, input.getAttribute('data-id'), input);
@@ -698,13 +699,42 @@ document.addEventListener('DOMContentLoaded', () => {
     const globalSearch = document.getElementById('global-search');
     if(globalSearch) globalSearch.addEventListener('input', renderProducts);
 
-    document.getElementById('admin-login-btn').addEventListener('click', () => {
-        document.getElementById('login-popup').classList.add('active');
-        document.getElementById('admin-user').focus();
-    });
+    // ปุ่มเปิดหน้าล็อกอินแอดมิน
+    const adminLoginBtn = document.getElementById('admin-login-btn');
+    if (adminLoginBtn) {
+        adminLoginBtn.addEventListener('click', () => {
+            document.getElementById('login-popup').classList.add('active');
+            document.getElementById('admin-user').focus();
+        });
+    }
 
-    document.getElementById('btn-submit-login').addEventListener('click', handleLogin);
-    document.getElementById('admin-logout-btn').addEventListener('click', handleLogout);
+    // ปุ่มปิดหน้าต่างล็อกอินต่างๆ (กากบาท และ ยกเลิก)
+    if (document.getElementById('close-login-popup-btn')) {
+        document.getElementById('close-login-popup-btn').addEventListener('click', () => closePopup('login-popup'));
+    }
+    if (document.getElementById('cancel-login-popup-btn')) {
+        document.getElementById('cancel-login-popup-btn').addEventListener('click', () => closePopup('login-popup'));
+    }
+    if (document.getElementById('close-category-popup-btn')) {
+        document.getElementById('close-category-popup-btn').addEventListener('click', () => closePopup('category-popup'));
+    }
+
+    // ตัวดักจับ Event สำหรับช่องกรอกข้อมูลและปุ่มส่งข้อมูลล็อกอิน
+    const adminPassInput = document.getElementById('admin-pass');
+    if (adminPassInput) adminPassInput.addEventListener('keypress', handleLoginKeyPress);
+
+    const adminUserInput = document.getElementById('admin-user');
+    if (adminUserInput) adminUserInput.addEventListener('keypress', handleLoginKeyPress);
+
+    if (document.getElementById('btn-submit-login')) {
+        document.getElementById('btn-submit-login').addEventListener('click', handleLogin);
+    }
+    
+    if (document.getElementById('admin-logout-btn')) {
+        document.getElementById('admin-logout-btn').addEventListener('click', handleLogout);
+    }
+
+    // ส่วนจัดการฟอร์มอื่นๆ หลังบ้าน
     document.getElementById('btn-save-slide').addEventListener('click', saveSlideAction);
     document.getElementById('btn-cancel-slide').addEventListener('click', cancelSlideEdit);
     document.getElementById('cat-type-select').addEventListener('change', toggleCategoryParentSelect);

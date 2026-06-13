@@ -61,7 +61,7 @@
         <div class="popup-content modal-large">
             <div class="popup-header">
                 <h3 id="popup-step-title">เลือกหมวดหมู่ย่อย</h3>
-                <button class="close-modal-btn" onclick="closePopup('category-popup')">&times;</button>
+                <button class="close-modal-btn" id="close-category-popup-btn">&times;</button>
             </div>
             
             <div id="popup-subcat-step" class="popup-step-view">
@@ -85,12 +85,12 @@
         <div class="popup-content">
             <div class="popup-header">
                 <h3>เข้าสู่ระบบผู้ดูแล</h3>
-                <button class="close-modal-btn" onclick="closePopup('login-popup')">&times;</button>
+                <button class="close-modal-btn" id="close-login-popup-btn">&times;</button>
             </div>
-            <input type="text" id="admin-user" placeholder="Username">
-            <input type="password" id="admin-pass" placeholder="Password" onkeypress="handleLoginKeyPress(event)">
+            <input type="text" id="admin-user" placeholder="Admin Email (เช่น admin@domain.com)">
+            <input type="password" id="admin-pass" placeholder="Password">
             <div class="popup-actions" style="display: flex; gap: 10px; margin-top: 5px;">
-                <button class="btn btn-secondary" style="flex:1;" onclick="closePopup('login-popup')">ยกเลิก</button>
+                <button class="btn btn-secondary" style="flex:1;" id="cancel-login-popup-btn">ยกเลิก</button>
                 <button class="btn btn-primary" style="flex:1;" id="btn-submit-login">เข้าสู่ระบบ</button>
             </div>
         </div>
