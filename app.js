@@ -17,7 +17,7 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 
-// สแตนด์บายโครงสร้างข้อมูลตั้งต้น (หากใน Firebase ยังไม่มีข้อมูลใดๆ เลย)
+// สแตนด์บายโครงสร้างข้อมูลตั้งต้น
 let storeData = {
     slides: [
         { img: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200", link: "#", code: "WELCOMENEW" },
@@ -61,7 +61,7 @@ onValue(storeRef, (snapshot) => {
     initApp();
 });
 
-// ตรวจสอบสถานะการ Login ของผู้ใช้งานจริงจาก Firebase Auth
+// ตรวจสอบสถานะการ Login จาก Firebase Auth
 onAuthStateChanged(auth, (user) => {
     if (user) {
         isAdminLoggedIn = true;
@@ -75,7 +75,7 @@ onAuthStateChanged(auth, (user) => {
 
 function saveData() {
     set(storeRef, storeData).then(() => {
-        initApp();
+        initApp(); 
     }).catch((error) => {
         alert("เกิดข้อผิดพลาดในการบันทึกข้อมูลไปที่ Firebase: " + error.message);
     });
@@ -100,9 +100,11 @@ function renderSlider() {
     wrapper.innerHTML = storeData.slides.map(slide => `
         <div class="slide-item"><img src="${slide.img}" onclick="if('${slide.link}'!=='#') window.open('${slide.link}','_blank')" style="cursor:pointer;"></div>
     `).join('');
-    dotsContainer.innerHTML = storeData.slides.map((_, idx) => `
-        <span class="dot ${idx === currentSlideIndex ? 'active' : ''}" onclick="jumpToSlide(${idx})"></span>
-    `).join('');
+    if (dotsContainer) {
+        dotsContainer.innerHTML = storeData.slides.map((_, idx) => `
+            <span class="dot ${idx === currentSlideIndex ? 'active' : ''}" onclick="jumpToSlide(${idx})"></span>
+        `).join('');
+    }
     updateSliderPosition();
 }
 
@@ -175,12 +177,16 @@ function backToSubcatStep() { if (activeMainCategoryContext) openCategoryWorkflo
 
 function applyCategoryFilterAndReset(id, labelName) {
     selectedCategoryFilter = id;
-    document.getElementById('current-view-title').innerText = labelName;
+    const viewTitle = document.getElementById('current-view-title');
+    if (viewTitle) viewTitle.innerText = labelName;
     closePopup('category-popup');
     renderProducts();
 }
 
-function closePopup(id) { document.getElementById(id).classList.remove('active'); }
+function closePopup(id) { 
+    const popup = document.getElementById(id);
+    if(popup) popup.classList.remove('active'); 
+}
 
 // --- RENDER MENUS ---
 function renderCategoriesMenu() {
@@ -218,7 +224,8 @@ function renderProducts() {
     const grid = document.getElementById('products-grid');
     const searchEl = document.getElementById('global-search');
     const query = searchEl ? searchEl.value.toLowerCase() : '';
-    const sortType = document.getElementById('product-sort-select').value;
+    const sortEl = document.getElementById('product-sort-select');
+    const sortType = sortEl ? sortEl.value : '';
     if (!grid) return;
 
     if (!storeData.products) storeData.products = [];
@@ -324,7 +331,7 @@ function showFloatingSaveButton() {
         position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
         background: #007bff; color: white; border: none; padding: 15px 30px;
         font-size: 16px; font-weight: bold; border-radius: 50px; cursor: pointer;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 99999; animation: pulseFloating 2s infinite;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3); z-index: 99999;
     `;
     
     saveBtn.onclick = function() {
@@ -462,13 +469,14 @@ function saveProductAction() {
         const pIndex = storeData.products.findIndex(p => p.id === editId);
         if (pIndex !== -1) {
             storeData.products[pIndex] = { id: editId, name, img, catId, price, code, keywords, link };
-            alert('แก้ไขข้อมูลสินค้าเรียบร้อยครับ!');
         }
         cancelProductEdit();
+        alert('แก้ไขข้อมูลสินค้าเรียบร้อยครับ!');
     } else {
         const newProd = { id: 'p-' + Date.now(), name, img, catId, price, code, keywords, link };
         storeData.products.push(newProd);
         clearProductForm();
+        alert('เพิ่มสินค้าใหม่ลงระบบสำเร็จแล้ว!');
     }
     saveData();
 }
@@ -543,7 +551,7 @@ function moveCategoryOrder(index, direction) {
 }
 
 function deleteCategory(id) {
-    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่นี้?')) {
+    if (confirm('คุณแน่ใจหรือไม่ว่าต้องการลบหมวดหมู่นี้? (สินค้าที่ผูกไว้จะไม่ถูกลบ แต่จะไม่แสดงในหมวดนี้แล้ว)')) {
         storeData.categories = storeData.categories.filter(c => c.id !== id);
         saveData();
     }
@@ -679,7 +687,7 @@ function renderAdminPanel() {
     }
 }
 
-// --- GLOBAL EXPOSURE (FOR HTML ONCLICK INTERFACE) ---
+// --- GLOBAL EXPOSURE ---
 window.moveSlider = moveSlider;
 window.jumpToSlide = jumpToSlide;
 window.openCategoryWorkflow = openCategoryWorkflow;
@@ -699,52 +707,49 @@ document.addEventListener('DOMContentLoaded', () => {
     const globalSearch = document.getElementById('global-search');
     if(globalSearch) globalSearch.addEventListener('input', renderProducts);
 
-    // ปุ่มเปิดหน้าล็อกอินแอดมิน
+    const sortSelect = document.getElementById('product-sort-select');
+    if(sortSelect) sortSelect.addEventListener('change', renderProducts);
+
     const adminLoginBtn = document.getElementById('admin-login-btn');
     if (adminLoginBtn) {
         adminLoginBtn.addEventListener('click', () => {
-            document.getElementById('login-popup').classList.add('active');
-            document.getElementById('admin-user').focus();
+            const loginPopup = document.getElementById('login-popup');
+            if(loginPopup) {
+                loginPopup.classList.add('active');
+                const adminUser = document.getElementById('admin-user');
+                if(adminUser) adminUser.focus();
+            }
         });
     }
 
-    // ปุ่มปิดหน้าต่างล็อกอินต่างๆ (กากบาท และ ยกเลิก)
-    if (document.getElementById('close-login-popup-btn')) {
-        document.getElementById('close-login-popup-btn').addEventListener('click', () => closePopup('login-popup'));
-    }
-    if (document.getElementById('cancel-login-popup-btn')) {
-        document.getElementById('cancel-login-popup-btn').addEventListener('click', () => closePopup('login-popup'));
-    }
-    if (document.getElementById('close-category-popup-btn')) {
-        document.getElementById('close-category-popup-btn').addEventListener('click', () => closePopup('category-popup'));
-    }
+    if (document.getElementById('close-login-popup-btn')) document.getElementById('close-login-popup-btn').addEventListener('click', () => closePopup('login-popup'));
+    if (document.getElementById('cancel-login-popup-btn')) document.getElementById('cancel-login-popup-btn').addEventListener('click', () => closePopup('login-popup'));
+    if (document.getElementById('close-category-popup-btn')) document.getElementById('close-category-popup-btn').addEventListener('click', () => closePopup('category-popup'));
 
-    // ตัวดักจับ Event สำหรับช่องกรอกข้อมูลและปุ่มส่งข้อมูลล็อกอิน
     const adminPassInput = document.getElementById('admin-pass');
     if (adminPassInput) adminPassInput.addEventListener('keypress', handleLoginKeyPress);
 
     const adminUserInput = document.getElementById('admin-user');
     if (adminUserInput) adminUserInput.addEventListener('keypress', handleLoginKeyPress);
 
-    if (document.getElementById('btn-submit-login')) {
-        document.getElementById('btn-submit-login').addEventListener('click', handleLogin);
-    }
-    
-    if (document.getElementById('admin-logout-btn')) {
-        document.getElementById('admin-logout-btn').addEventListener('click', handleLogout);
-    }
+    if (document.getElementById('btn-submit-login')) document.getElementById('btn-submit-login').addEventListener('click', handleLogin);
+    if (document.getElementById('admin-logout-btn')) document.getElementById('admin-logout-btn').addEventListener('click', handleLogout);
 
-    // ส่วนจัดการฟอร์มอื่นๆ หลังบ้าน
-    document.getElementById('btn-save-slide').addEventListener('click', saveSlideAction);
-    document.getElementById('btn-cancel-slide').addEventListener('click', cancelSlideEdit);
-    document.getElementById('cat-type-select').addEventListener('change', toggleCategoryParentSelect);
-    document.getElementById('btn-add-category').addEventListener('click', addCategory);
-    document.getElementById('btn-save-product').addEventListener('click', saveProductAction);
-    document.getElementById('btn-cancel-edit-product').addEventListener('click', cancelProductEdit);
-    document.getElementById('select-all-bulk').addEventListener('click', function() { toggleSelectAllBulk(this); });
+    if (document.getElementById('btn-save-slide')) document.getElementById('btn-save-slide').addEventListener('click', saveSlideAction);
+    if (document.getElementById('btn-cancel-slide')) document.getElementById('btn-cancel-slide').addEventListener('click', cancelSlideEdit);
     
-    document.getElementById('admin-filter-code-select').addEventListener('change', function() {
-        selectProductsBySpecificCode(this.value);
-    });
-    document.getElementById('btn-apply-bulk-code').addEventListener('click', applyBulkCodeChange);
+    const catTypeSelect = document.getElementById('cat-type-select');
+    if (catTypeSelect) catTypeSelect.addEventListener('change', toggleCategoryParentSelect);
+    
+    if (document.getElementById('btn-add-category')) document.getElementById('btn-add-category').addEventListener('click', addCategory);
+    if (document.getElementById('btn-save-product')) document.getElementById('btn-save-product').addEventListener('click', saveProductAction);
+    if (document.getElementById('btn-cancel-edit-product')) document.getElementById('btn-cancel-edit-product').addEventListener('click', cancelProductEdit);
+    
+    const selectAllBulk = document.getElementById('select-all-bulk');
+    if (selectAllBulk) selectAllBulk.addEventListener('click', function() { toggleSelectAllBulk(this); });
+    
+    const codeFilterSelect = document.getElementById('admin-filter-code-select');
+    if(codeFilterSelect) codeFilterSelect.addEventListener('change', function() { selectProductsBySpecificCode(this.value); });
+    
+    if(document.getElementById('btn-apply-bulk-code')) document.getElementById('btn-apply-bulk-code').addEventListener('click', applyBulkCodeChange);
 });
