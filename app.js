@@ -219,13 +219,20 @@ function renderCategoriesMenu() {
 function getProductMatchesFilter(productCatId, targetFilterId) {
     if (!targetFilterId) return true;
     if (productCatId === targetFilterId) return true;
+    
+    // ค้นหา Object ของหมวดหมู่ที่ระบุ
     const currentCatObj = storeData.categories.find(c => c.id === productCatId);
-    if (currentCatObj && currentCatObj.parentId === targetFilterId) return true;
-    if (currentCatObj && currentCatObj.type === 'brand') {
+    if (!currentCatObj) return false;
+
+    // ถ้าเลือกหมวดหลัก (Main)
+    if (currentCatObj.parentId === targetFilterId) return true;
+    
+    // ถ้าเลือกหมวดรอง (Sub) และสินค้าอยู่ภายใต้ Brand ใน Sub นั้น
+    if (currentCatObj.type === 'brand') {
         const parentSub = storeData.categories.find(c => c.id === currentCatObj.parentId);
         if (parentSub && parentSub.parentId === targetFilterId) return true;
     }
-    if (currentCatObj && currentCatObj.type === 'sub' && currentCatObj.parentId === targetFilterId) return true;
+    
     return false;
 }
 
@@ -281,8 +288,8 @@ function renderProducts() {
                 <div class="product-info">
                     <h4 class="product-title">${p.name}</h4>
                     <div class="price-container">
-                        ${p.code && discounted < p.price ? `<span class="original-price">฿${p.price}</span>` : ''}
-                        <span class="discount-price">฿${discounted}</span>
+                        ${p.code && discounted < p.price ? `<span class="original-price">฿${p.price.toLocaleString('th-TH')}</span>` : ''}
+                        <span class="discount-price">฿${discounted.toLocaleString('th-TH')}</span>
                     </div>
                     <button class="btn btn-primary btn-full" onclick="window.open('${p.link}', '_blank')">สั่งซื้อสินค้า</button>
                 </div>
