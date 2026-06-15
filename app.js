@@ -168,6 +168,7 @@ function openCategoryWorkflow(mainCatId) {
 function advanceToBrandStep(subCatId) {
     const subCat = storeData.categories.find(c => c.id === subCatId);
     const mainCat = storeData.categories.find(c => c.id === activeMainCategoryContext);
+    
     document.getElementById('popup-step-title').innerText = `${mainCat.name} › ${subCat.name} › เลือกแบรนด์`;
     
     const btnViewAllSub = document.getElementById('btn-view-all-sub');
@@ -176,8 +177,28 @@ function advanceToBrandStep(subCatId) {
 
     const brands = storeData.categories.filter(c => c.type === 'brand' && c.parentId === subCatId);
     const container = document.getElementById('popup-brand-list');
-    container.innerHTML = brands.length === 0 ? `<p style="grid-column:1/-1; text-align:center; color:#777;">ไม่มีแบรนด์เฉพาะในหมวดนี้</p>` :
-        brands.map(b => `<div class="selection-item-btn" onclick="applyCategoryFilterAndReset('${b.id}', '${b.name}')">${b.name}</div>`).join('');
+    
+    if (brands.length === 0) {
+        container.innerHTML = `<p style="grid-column:1/-1; text-align:center; color:#777;">ไม่มีแบรนด์เฉพาะในหมวดนี้</p>`;
+    } else {
+        container.innerHTML = ''; // เคลียร์ค่าเก่าออกก่อน
+        
+        // ใช้สร้าง Element ตรงๆ แล้วผูก event .onclick ด้วย JavaScript แทนการเขียนสตริง HTML
+        // วิธีนี้จะปลอดภัย 100% ต่อให้ชื่อแบรนด์มีเครื่องหมายอัญประกาศ ' หรือ " ก็ตามครับ
+        brands.forEach(b => {
+            const btn = document.createElement('div');
+            btn.className = 'selection-item-btn';
+            btn.innerText = b.name;
+            btn.style.cursor = 'pointer';
+            
+            // ผูกฟังก์ชันโดยตรง ไม่ผ่าน String HTML ลบปัญหาเครื่องหมายอัญประกาศล้น
+            btn.onclick = function() {
+                applyCategoryFilterAndReset(b.id, b.name);
+            };
+            
+            container.appendChild(btn);
+        });
+    }
 
     document.getElementById('popup-subcat-step').classList.add('hidden');
     document.getElementById('popup-brand-step').classList.remove('hidden');
@@ -217,22 +238,26 @@ function renderCategoriesMenu() {
 }
 
 function getProductMatchesFilter(productCatId, targetFilterId) {
+    // 1. ถ้าไม่ได้เลือก filter อะไรเลย ให้แสดงทั้งหมด
     if (!targetFilterId) return true;
-    if (productCatId === targetFilterId) return true;
-    
-    // ค้นหา Object ของหมวดหมู่ที่ระบุ
-    const currentCatObj = storeData.categories.find(c => c.id === productCatId);
-    if (!currentCatObj) return false;
 
-    // ถ้าเลือกหมวดหลัก (Main)
-    if (currentCatObj.parentId === targetFilterId) return true;
-    
-    // ถ้าเลือกหมวดรอง (Sub) และสินค้าอยู่ภายใต้ Brand ใน Sub นั้น
-    if (currentCatObj.type === 'brand') {
-        const parentSub = storeData.categories.find(c => c.id === currentCatObj.parentId);
-        if (parentSub && parentSub.parentId === targetFilterId) return true;
+    // 2. ถ้า productCatId ของสินค้าตรงกับ targetFilterId ที่เลือกไว้ตรงๆ (ไม่ว่าจะเป็น Sub หรือ Brand)
+    if (productCatId === targetFilterId) return true;
+
+    // 3. วนลูปหาขึ้นไปตามสายสัมพันธ์ (ตัวแบรนด์ -> หมวดหมู่ย่อย -> หมวดหมู่หลัก)
+    let currentCat = storeData.categories.find(c => c.id === productCatId);
+    let safetyCounter = 0; // ป้องกัน Loop ไม่รู้จบ
+
+    while (currentCat && safetyCounter < 10) {
+        // ถ้า parentId ของหมวดหมู่ปัจจุบัน ตรงกับหมวดหมู่ที่เรากำลังกรองอยู่ ให้ถือว่าแมตช์
+        if (currentCat.parentId === targetFilterId) {
+            return true;
+        }
+        // ขยับขึ้นไปเช็คในระดับถัดไป (เช่น จากแบรนด์ ขยับขึ้นไปเช็คหมวดหมู่ย่อย)
+        currentCat = storeData.categories.find(c => c.id === currentCat.parentId);
+        safetyCounter++;
     }
-    
+
     return false;
 }
 
@@ -559,6 +584,24 @@ function addCategory() {
     saveData();
 }
 
+function handleInlineCategoryNameEnter(e, catId, input) {
+    if (e.key === 'Enter') {
+        const newName = input.value.trim();
+        if (!newName) return alert('กรุณาระบุชื่อหมวดหมู่ให้ถูกต้อง (ห้ามเว้นว่าง)');
+        
+        const cat = storeData.categories.find(c => c.id === catId);
+        if (cat) { 
+            cat.name = newName; 
+            saveData(); 
+            alert('อัปเดตชื่อหมวดหมู่เรียบร้อยครับ!'); 
+        }
+    }
+}
+
+// เปิดระบบให้ฟังก์ชันนี้เรียกใช้งานได้ทั่วโลก (Global Exposure)
+window.handleInlineCategoryNameEnter = handleInlineCategoryNameEnter;
+
+
 function moveCategoryOrder(index, direction) {
     const targetIndex = index + direction;
     if (targetIndex < 0 || targetIndex >= storeData.categories.length) return;
@@ -686,8 +729,13 @@ function renderAdminPanel() {
         adminCatList.innerHTML = storeData.categories.map((c, index) => {
             let typeLabel = c.type === 'main' ? '★ หลัก' : c.type === 'sub' ? '↳ ย่อย' : '▫ แบรนด์';
             return `
-                <li>
-                    <span><strong>[${typeLabel}]</strong> ${c.name}</span>
+                <li style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-grow: 1;">
+                        <span style="font-size: 13px; min-width: 75px;"><strong>[${typeLabel}]</strong></span>
+                        <input type="text" class="inline-edit-cat-name" value="${c.name}" data-id="${c.id}" 
+                               style="padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; width: 60%; max-width: 250px;">
+                        <small style="color: #999; font-size: 10px;">(กด Enter เพื่อบันทึก)</small>
+                    </div>
                     <div class="sort-btns" style="display: flex; gap: 5px;">
                         <button onclick="moveCategoryOrder(${index}, -1)" style="cursor:pointer; padding: 2px 6px;">↑</button>
                         <button onclick="moveCategoryOrder(${index}, 1)" style="cursor:pointer; padding: 2px 6px;">↓</button>
@@ -696,6 +744,13 @@ function renderAdminPanel() {
                 </li>
             `;
         }).join('');
+        
+        // ผูก Event listener เมื่อกด Enter ที่ช่องแก้ไขชื่อหมวดหมู่
+        adminCatList.querySelectorAll('.inline-edit-cat-name').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                handleInlineCategoryNameEnter(e, input.getAttribute('data-id'), input);
+            });
+        });
     }
 
     const prodCatSelect = document.getElementById('prod-cat-select');
